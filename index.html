@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Modern Calculator</title>
+    <style>
+      :root {
+        --bg-1: #0f172a;
+        --bg-2: #111827;
+        --panel: rgba(17, 24, 39, 0.78);
+        --panel-border: rgba(148, 163, 184, 0.2);
+        --screen: #0b1220;
+        --screen-text: #e2e8f0;
+        --operator: #f59e0b;
+        --secondary: #1e293b;
+        --equal: #10b981;
+        --equal-hover: #34d399;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --shadow: rgba(15, 23, 42, 0.45);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(circle at top, #1e293b, var(--bg-1) 25%, var(--bg-2) 100%);
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        color: var(--text);
+      }
+
+      .app {
+        width: min(92vw, 420px);
+      }
+
+      .calculator {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 28px;
+        padding: 22px;
+        box-shadow: 0 30px 60px var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+
+      .display-wrap {
+        background: var(--screen);
+        border-radius: 18px;
+        padding: 18px 16px 14px;
+        margin-bottom: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.15);
+      }
+
+      .history {
+        min-height: 24px;
+        text-align: right;
+        font-size: 0.9rem;
+        color: var(--muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .display {
+        width: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--screen-text);
+        text-align: right;
+        font-size: clamp(2.2rem, 6vw, 3rem);
+        font-weight: 600;
+        padding: 8px 0 0;
+      }
+
+      .keys {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .btn {
+        appearance: none;
+        border: none;
+        border-radius: 16px;
+        min-height: 62px;
+        font-size: 1.35rem;
+        font-weight: 700;
+        cursor: pointer;
+        background: #1f2937;
+        color: var(--text);
+        transition: transform 0.12s ease, filter 0.2s ease, background 0.2s ease;
+      }
+
+      .btn:hover {
+        filter: brightness(1.08);
+      }
+
+      .btn:active {
+        transform: translateY(1px) scale(0.99);
+      }
+
+      .btn.secondary {
+        background: var(--secondary);
+        color: var(--text);
+      }
+
+      .btn.operator {
+        background: var(--operator);
+        color: #fff;
+      }
+
+      .btn.equals {
+        background: linear-gradient(135deg, var(--equal), var(--equal-hover));
+        color: white;
+      }
+
+      .btn.zero {
+        grid-column: span 2;
+      }
+
+      @media (max-width: 420px) {
+        .calculator {
+          padding: 18px;
+        }
+
+        .keys {
+          gap: 10px;
+        }
+
+        .btn {
+          min-height: 58px;
+          font-size: 1.15rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="calculator" aria-label="Calculator">
+        <div class="display-wrap">
+          <div id="history" class="history" aria-live="polite">0</div>
+          <input id="display" class="display" type="text" value="0" aria-label="Calculator display" readonly />
+        </div>
+
+        <div class="keys">
+          <button class="btn secondary" data-action="clear">C</button>
+          <button class="btn secondary" data-action="delete">DEL</button>
+          <button class="btn secondary" data-action="percent">%</button>
+          <button class="btn operator" data-action="operator" data-value="/">÷</button>
+
+          <button class="btn number" data-value="7">7</button>
+          <button class="btn number" data-value="8">8</button>
+          <button class="btn number" data-value="9">9</button>
+          <button class="btn operator" data-action="operator" data-value="*">×</button>
+
+          <button class="btn number" data-value="4">4</button>
+          <button class="btn number" data-value="5">5</button>
+          <button class="btn number" data-value="6">6</button>
+          <button class="btn operator" data-action="operator" data-value="-">−</button>
+
+          <button class="btn number" data-value="1">1</button>
+          <button class="btn number" data-value="2">2</button>
+          <button class="btn number" data-value="3">3</button>
+          <button class="btn operator" data-action="operator" data-value="+">+</button>
+
+          <button class="btn number zero" data-value="0">0</button>
+          <button class="btn number" data-value=".">.</button>
+          <button class="btn equals" data-action="equals">=</button>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const display = document.getElementById('display');
+      const history = document.getElementById('history');
+
+      let currentInput = '0';
+      let expression = '';
+      let justEvaluated = false;
+
+      function updateDisplay() {
+        display.value = currentInput;
+      }
+
+      function updateHistory() {
+        history.textContent = expression || '0';
+      }
+
+      function clearAll() {
+        currentInput = '0';
+        expression = '';
+        justEvaluated = false;
+        updateDisplay();
+        updateHistory();
+      }
+
+      function deleteLast() {
+        if (justEvaluated) {
+          clearAll();
+          return;
+        }
+
+        if (expression.length > 0) {
+          expression = expression.slice(0, -1);
+          currentInput = expression || '0';
+          updateDisplay();
+          updateHistory();
+        }
+      }
+
+      function appendNumber(value) {
+        if (justEvaluated) {
+          expression = '';
+          currentInput = '0';
+          justEvaluated = false;
+        }
+
+        if (value === '.' && currentInput.includes('.')) return;
+
+        if (currentInput === '0' && value !== '.') {
+          currentInput = value;
+        } else {
+          currentInput += value;
+        }
+
+        expression += value;
+        updateDisplay();
+        updateHistory();
+      }
+
+      function appendOperator(operator) {
+        if (justEvaluated) {
+          justEvaluated = false;
+        }
+
+        const lastChar = expression.slice(-1);
+        if (['+', '-', '*', '/', '%'].includes(lastChar)) {
+          expression = expression.slice(0, -1) + operator;
+        } else {
+          expression += operator;
+        }
+
+        currentInput = operator;
+        updateDisplay();
+        updateHistory();
+      }
+
+      function evaluateExpression() {
+        if (!expression) return;
+
+        try {
+          const sanitized = expression.replace(/×/g, '*').replace(/÷/g, '/');
+          const result = Function(`"use strict"; return (${sanitized})`)();
+
+          if (!Number.isFinite(result)) {
+            throw new Error('Invalid calculation');
+          }
+
+          const formatted = Number.isInteger(result) ? String(result) : Number(result.toFixed(10)).toString();
+          history.textContent = `${expression} =`;
+          expression = formatted;
+          currentInput = formatted;
+          justEvaluated = true;
+          updateDisplay();
+        } catch {
+          history.textContent = 'Error';
+          expression = '';
+          currentInput = '0';
+          justEvaluated = false;
+          updateDisplay();
+        }
+      }
+
+      function percentValue() {
+        if (!expression) return;
+
+        try {
+          const sanitized = expression.replace(/×/g, '*').replace(/÷/g, '/');
+          const result = Function(`"use strict"; return (${sanitized}) / 100`)();
+          const formatted = Number.isInteger(result) ? String(result) : Number(result.toFixed(10)).toString();
+          expression = formatted;
+          currentInput = formatted;
+          updateDisplay();
+          updateHistory();
+        } catch {
+          clearAll();
+          history.textContent = 'Error';
+        }
+      }
+
+      document.querySelectorAll('.number').forEach((button) => {
+        button.addEventListener('click', () => {
+          appendNumber(button.dataset.value);
+        });
+      });
+
+      document.querySelectorAll('.operator').forEach((button) => {
+        button.addEventListener('click', () => {
+          appendOperator(button.dataset.value);
+        });
+      });
+
+      document.querySelector('[data-action="clear"]').addEventListener('click', clearAll);
+      document.querySelector('[data-action="delete"]').addEventListener('click', deleteLast);
+      document.querySelector('[data-action="equals"]').addEventListener('click', evaluateExpression);
+      document.querySelector('[data-action="percent"]').addEventListener('click', percentValue);
+
+      updateDisplay();
+      updateHistory();
+    </script>
+  </body>
+</html>
